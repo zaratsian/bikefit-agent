@@ -2,32 +2,64 @@
 
 Calculates handlebar positions, solves stem/spacer configurations to replicate
 fit coordinates across frames, and audits structural safety and handling.
+All tools return strict Pydantic models for validated, type-safe output schemas.
 """
 
 import math
-from typing import Dict, Any, List, Optional
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
 class CockpitCoordinates(BaseModel):
-    """Cockpit coordinate position relative to bottom bracket (0,0)."""
+    """Strict output schema for handlebar coordinate position relative to bottom bracket (0,0)."""
     x_bar_mm: float = Field(..., description="Handlebar X position (horizontal reach from BB in mm)")
     y_bar_mm: float = Field(..., description="Handlebar Y position (vertical stack from BB in mm)")
     stack_to_reach_ratio: float = Field(..., description="Frame stack-to-reach ratio")
     fit_category: str = Field(..., description="Race, Performance, or Endurance classification")
-    effective_stem_angle_horizontal_deg: float = Field(..., description="Stem angle relative to horizontal")
+    effective_stem_angle_horizontal_deg: float = Field(..., description="Stem angle relative to horizontal ground")
+    delta_spacer_x_mm: float = Field(..., description="Horizontal displacement contributed by headset spacers in mm")
+    delta_spacer_y_mm: float = Field(..., description="Vertical displacement contributed by headset spacers in mm")
+    delta_stem_x_mm: float = Field(..., description="Horizontal displacement contributed by stem in mm")
+    delta_stem_y_mm: float = Field(..., description="Vertical displacement contributed by stem in mm")
 
 
 class MatchSolution(BaseModel):
-    """Stem and spacer solution to replicate a cockpit position."""
+    """Strict output schema for stem and spacer solution replicating a cockpit position."""
     stem_length_mm: int = Field(..., description="Recommended stem length in mm")
-    stem_angle_deg: int = Field(..., description="Recommended stem angle in degrees (e.g. -6, +6, -17)")
+    stem_angle_deg: float = Field(..., description="Recommended stem angle in degrees (e.g. -6, +6, -17)")
     spacer_height_mm: float = Field(..., description="Recommended headset spacer stack in mm")
+    achieved_x_bar_mm: float = Field(..., description="Achieved handlebar X coordinate in mm")
+    achieved_y_bar_mm: float = Field(..., description="Achieved handlebar Y coordinate in mm")
+    target_x_bar_mm: float = Field(..., description="Target baseline handlebar X coordinate in mm")
+    target_y_bar_mm: float = Field(..., description="Target baseline handlebar Y coordinate in mm")
     delta_x_mm: float = Field(..., description="Horizontal error difference in mm")
     delta_y_mm: float = Field(..., description="Vertical error difference in mm")
     total_error_mm: float = Field(..., description="Euclidean distance error in mm")
     is_safe: bool = Field(..., description="Whether the setup meets safety guidelines")
     safety_notes: List[str] = Field(default_factory=list, description="Warnings or guidance")
+    baseline_fit_category: str = Field(..., description="Category classification of baseline frame")
+    target_frame_str_ratio: float = Field(..., description="Stack-to-reach ratio of target frame")
+
+
+class RiderFitRanges(BaseModel):
+    """Strict output schema for rider anthropometric baseline fit estimates."""
+    height_cm: float = Field(..., description="Rider height in cm")
+    inseam_cm: float = Field(..., description="Rider cycling inseam in cm")
+    recommended_saddle_height_mm: float = Field(..., description="Recommended LeMond saddle height in mm")
+    recommended_saddle_setback_mm: float = Field(..., description="Estimated KOPS saddle setback from BB in mm")
+    estimated_road_frame_size_cm: int = Field(..., description="Estimated traditional road frame size in cm")
+    target_stack_to_reach_ratio: float = Field(..., description="Target stack-to-reach ratio based on flexibility")
+    recommended_category: str = Field(..., description="Recommended frame category: Race, Performance, or Endurance")
+    ergonomic_notes: str = Field(..., description="Posture guidance and ergonomic notes")
+
+
+class SafetyAuditResult(BaseModel):
+    """Strict output schema for cockpit safety and steering handling compliance."""
+    risk_level: str = Field(..., description="Risk assessment: 'LOW', 'MODERATE', or 'CRITICAL'")
+    handling_dynamics: str = Field(..., description="Steering response rating (e.g., Agile, Neutral, Twitchy, Sluggish)")
+    warnings: List[str] = Field(default_factory=list, description="Specific safety or handling warnings")
+    is_structurally_compliant: bool = Field(..., description="True if spacer stack is within carbon steerer limits")
+    max_recommended_spacers_mm: float = Field(..., description="Maximum allowable spacer stack height in mm")
 
 
 def calculate_handlebar_position(
@@ -37,7 +69,7 @@ def calculate_handlebar_position(
     spacer_height_mm: float,
     stem_length_mm: float,
     stem_angle_deg: float = -6.0
-) -> Dict[str, Any]:
+) -> CockpitCoordinates:
     """Calculate the precise (X, Y) coordinate position of the handlebar center relative to the Bottom Bracket (0, 0).
 
     Args:
@@ -49,7 +81,7 @@ def calculate_handlebar_position(
         stem_angle_deg: Stem angle relative to perpendicular to steerer tube in degrees (e.g., -6, -17, +6).
 
     Returns:
-        A dictionary containing the X and Y coordinates (mm), stack-to-reach ratio, and fit category.
+        CockpitCoordinates: Strict Pydantic model with X and Y coordinates (mm), STR ratio, and fit category.
     """
     steerer_rad = math.radians(head_tube_angle_deg)
     
@@ -58,7 +90,6 @@ def calculate_handlebar_position(
     delta_y_spacer = spacer_height_mm * math.sin(steerer_rad)
 
     # Angle of the stem relative to the horizontal ground
-    # Perpendicular to steerer is (90.0 - HTA) above horizontal
     stem_angle_horizontal = (90.0 - head_tube_angle_deg) + stem_angle_deg
     stem_rad = math.radians(stem_angle_horizontal)
 
@@ -78,17 +109,17 @@ def calculate_handlebar_position(
     else:
         category = "Comfort Endurance"
 
-    return {
-        "x_bar_mm": x_bar,
-        "y_bar_mm": y_bar,
-        "stack_to_reach_ratio": str_ratio,
-        "fit_category": category,
-        "effective_stem_angle_horizontal_deg": round(stem_angle_horizontal, 1),
-        "delta_spacer_x_mm": round(delta_x_spacer, 1),
-        "delta_spacer_y_mm": round(delta_y_spacer, 1),
-        "delta_stem_x_mm": round(delta_x_stem, 1),
-        "delta_stem_y_mm": round(delta_y_stem, 1),
-    }
+    return CockpitCoordinates(
+        x_bar_mm=x_bar,
+        y_bar_mm=y_bar,
+        stack_to_reach_ratio=str_ratio,
+        fit_category=category,
+        effective_stem_angle_horizontal_deg=round(stem_angle_horizontal, 1),
+        delta_spacer_x_mm=round(delta_x_spacer, 1),
+        delta_spacer_y_mm=round(delta_y_spacer, 1),
+        delta_stem_x_mm=round(delta_x_stem, 1),
+        delta_stem_y_mm=round(delta_y_stem, 1),
+    )
 
 
 def solve_cockpit_match(
@@ -102,8 +133,8 @@ def solve_cockpit_match(
     target_reach_mm: float,
     target_hta_deg: float,
     max_spacer_mm: float = 40.0
-) -> Dict[str, Any]:
-    """Find the optimal stem length, stem angle, and spacer stack to match a rider's current handlebar coordinates on a new bike frame.
+) -> MatchSolution:
+    """Find optimal stem length, stem angle, and spacer stack to match current handlebar coordinates on a new frame.
 
     Args:
         current_stack_mm: Baseline bike frame stack in mm.
@@ -118,7 +149,7 @@ def solve_cockpit_match(
         max_spacer_mm: Maximum allowable spacer height in mm (safety ceiling, default 40mm).
 
     Returns:
-        Best configuration dictionary with recommended stem, spacers, delta error, and safety evaluation.
+        MatchSolution: Strict Pydantic model with recommended stem, spacers, delta error, and safety evaluation.
     """
     # 1. Compute target coordinate from baseline setup
     baseline = calculate_handlebar_position(
@@ -129,13 +160,12 @@ def solve_cockpit_match(
         current_stem_len_mm,
         current_stem_angle_deg
     )
-    target_x = baseline["x_bar_mm"]
-    target_y = baseline["y_bar_mm"]
+    target_x = baseline.x_bar_mm
+    target_y = baseline.y_bar_mm
 
     # 2. Search space of realistic commercial components
     candidate_stems = [70, 80, 90, 100, 110, 120, 130, 140]
     candidate_angles = [-17.0, -10.0, -6.0, 0.0, 6.0, 10.0, 17.0]
-    # Spacers from 0mm to max_spacer_mm in 2.5mm steps
     spacer_steps = int(max_spacer_mm / 2.5) + 1
     candidate_spacers = [round(i * 2.5, 1) for i in range(spacer_steps)]
 
@@ -153,8 +183,8 @@ def solve_cockpit_match(
                     stem_len,
                     stem_ang
                 )
-                dx = candidate["x_bar_mm"] - target_x
-                dy = candidate["y_bar_mm"] - target_y
+                dx = candidate.x_bar_mm - target_x
+                dy = candidate.y_bar_mm - target_y
                 error = math.sqrt(dx * dx + dy * dy)
 
                 if error < min_error:
@@ -163,8 +193,8 @@ def solve_cockpit_match(
                         "stem_length_mm": stem_len,
                         "stem_angle_deg": stem_ang,
                         "spacer_height_mm": spacer,
-                        "achieved_x_bar_mm": candidate["x_bar_mm"],
-                        "achieved_y_bar_mm": candidate["y_bar_mm"],
+                        "achieved_x_bar_mm": candidate.x_bar_mm,
+                        "achieved_y_bar_mm": candidate.y_bar_mm,
                         "target_x_bar_mm": target_x,
                         "target_y_bar_mm": target_y,
                         "delta_x_mm": round(dx, 1),
@@ -193,19 +223,29 @@ def solve_cockpit_match(
     if best_solution["total_error_mm"] > 5.0:
         safety_notes.append(f"Position cannot be perfectly replicated (minimum discrepancy {best_solution['total_error_mm']}mm).")
 
-    best_solution["is_safe"] = is_safe
-    best_solution["safety_notes"] = safety_notes
-    best_solution["baseline_fit_category"] = baseline["fit_category"]
-    best_solution["target_frame_str_ratio"] = round(target_stack_mm / target_reach_mm, 2)
-
-    return best_solution
+    return MatchSolution(
+        stem_length_mm=best_solution["stem_length_mm"],
+        stem_angle_deg=best_solution["stem_angle_deg"],
+        spacer_height_mm=best_solution["spacer_height_mm"],
+        achieved_x_bar_mm=best_solution["achieved_x_bar_mm"],
+        achieved_y_bar_mm=best_solution["achieved_y_bar_mm"],
+        target_x_bar_mm=best_solution["target_x_bar_mm"],
+        target_y_bar_mm=best_solution["target_y_bar_mm"],
+        delta_x_mm=best_solution["delta_x_mm"],
+        delta_y_mm=best_solution["delta_y_mm"],
+        total_error_mm=best_solution["total_error_mm"],
+        is_safe=is_safe,
+        safety_notes=safety_notes,
+        baseline_fit_category=baseline.fit_category,
+        target_frame_str_ratio=round(target_stack_mm / target_reach_mm, 2)
+    )
 
 
 def calculate_rider_fit_ranges(
     height_cm: float,
     inseam_cm: float,
     flexibility: str = "moderate"
-) -> Dict[str, Any]:
+) -> RiderFitRanges:
     """Calculate recommended starting bike fit parameters based on anthropometric measurements.
 
     Args:
@@ -214,15 +254,10 @@ def calculate_rider_fit_ranges(
         flexibility: Rider spine and hamstring flexibility ('low', 'moderate', 'high').
 
     Returns:
-        Dictionary with recommended saddle height, saddle setback, target stack/reach, and frame size.
+        RiderFitRanges: Strict Pydantic model with saddle height, setback, target STR, and sizing.
     """
-    # LeMond formula for saddle height from BB center to top of saddle
     saddle_height_mm = round(inseam_cm * 0.883 * 10, 1)
-
-    # Estimated saddle setback from BB (KOPS baseline)
     saddle_setback_mm = round(inseam_cm * 0.08 * 10, 1)
-
-    # Frame sizing estimation based on inseam and height
     est_road_size = round((inseam_cm * 0.665), 0)
 
     flex = flexibility.lower()
@@ -239,16 +274,16 @@ def calculate_rider_fit_ranges(
         recommended_category = "Performance All-Round"
         notes = "Balanced posture balancing aerodynamic efficiency and all-day endurance comfort."
 
-    return {
-        "height_cm": height_cm,
-        "inseam_cm": inseam_cm,
-        "recommended_saddle_height_mm": saddle_height_mm,
-        "recommended_saddle_setback_mm": saddle_setback_mm,
-        "estimated_road_frame_size_cm": int(est_road_size),
-        "target_stack_to_reach_ratio": target_str,
-        "recommended_category": recommended_category,
-        "ergonomic_notes": notes
-    }
+    return RiderFitRanges(
+        height_cm=height_cm,
+        inseam_cm=inseam_cm,
+        recommended_saddle_height_mm=saddle_height_mm,
+        recommended_saddle_setback_mm=saddle_setback_mm,
+        estimated_road_frame_size_cm=int(est_road_size),
+        target_stack_to_reach_ratio=target_str,
+        recommended_category=recommended_category,
+        ergonomic_notes=notes
+    )
 
 
 def evaluate_bike_safety_and_handling(
@@ -256,7 +291,7 @@ def evaluate_bike_safety_and_handling(
     stem_length_mm: float,
     stem_angle_deg: float,
     is_carbon_steerer: bool = True
-) -> Dict[str, Any]:
+) -> SafetyAuditResult:
     """Audit the structural safety and steering dynamics of a proposed cockpit setup.
 
     Args:
@@ -266,7 +301,7 @@ def evaluate_bike_safety_and_handling(
         is_carbon_steerer: True if fork steerer tube is carbon fiber (standard on modern bikes).
 
     Returns:
-        Safety compliance dictionary with risk level, steering responsiveness rating, and recommendations.
+        SafetyAuditResult: Strict Pydantic model with risk level, steering responsiveness, and recommendations.
     """
     warnings = []
     risk_level = "LOW"
@@ -296,10 +331,10 @@ def evaluate_bike_safety_and_handling(
     if stem_angle_deg > 10.0:
         warnings.append("High positive angle (+17°) may significantly alter reach dynamics and visual aesthetics.")
 
-    return {
-        "risk_level": risk_level,
-        "handling_dynamics": handling,
-        "warnings": warnings,
-        "is_structurally_compliant": (risk_level != "CRITICAL"),
-        "max_recommended_spacers_mm": 40.0 if is_carbon_steerer else 50.0
-    }
+    return SafetyAuditResult(
+        risk_level=risk_level,
+        handling_dynamics=handling,
+        warnings=warnings,
+        is_structurally_compliant=(risk_level != "CRITICAL"),
+        max_recommended_spacers_mm=40.0 if is_carbon_steerer else 50.0
+    )

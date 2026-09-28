@@ -6,14 +6,25 @@ from .geometry import (
     calculate_rider_fit_ranges,
     evaluate_bike_safety_and_handling,
     CockpitCoordinates,
-    MatchSolution
+    MatchSolution,
+    RiderFitRanges,
+    SafetyAuditResult,
 )
 from .catalog import (
     lookup_bike,
     compare_two_bikes,
     search_bikes_by_category,
     list_all_bikes,
-    load_catalog
+    load_catalog,
+    BikeSpec,
+    BikeSizeOption,
+    BikeLookupResult,
+    BikeFrameSummary,
+    GeometryDelta,
+    BikeComparisonResult,
+    BikeSearchItem,
+    BikeSearchResult,
+    BikeListResult,
 )
 
 __all__ = [
@@ -23,9 +34,20 @@ __all__ = [
     "evaluate_bike_safety_and_handling",
     "CockpitCoordinates",
     "MatchSolution",
+    "RiderFitRanges",
+    "SafetyAuditResult",
     "lookup_bike",
     "compare_two_bikes",
     "search_bikes_by_category",
     "list_all_bikes",
-    "load_catalog"
+    "load_catalog",
+    "BikeSpec",
+    "BikeSizeOption",
+    "BikeLookupResult",
+    "BikeFrameSummary",
+    "GeometryDelta",
+    "BikeComparisonResult",
+    "BikeSearchItem",
+    "BikeSearchResult",
+    "BikeListResult",
 ]

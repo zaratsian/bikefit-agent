@@ -66,7 +66,7 @@ flowchart TD
 
 | Criteria | Implementation Highlights |
 | :--- | :--- |
-| **Tool & Interface Design** | • **8 typed, custom Python tools** with full docstrings, typed Pydantic parameters, and validation.<br/>• Available via **ADK CLI** (`adk run`), **FastAPI Web UI** (`adk web`), and headless script (`run_agent.py`). |
+| **Tool & Interface Design** | • **8 typed, custom Python tools** returning **strict, validated Pydantic models** (`CockpitCoordinates`, `MatchSolution`, `RiderFitRanges`, `SafetyAuditResult`, `BikeLookupResult`, `BikeComparisonResult`, `BikeSearchResult`, `BikeListResult`).<br/>• Comprehensive docstrings, full type hints, and guided error handling in catalog lookups returning alternative models.<br/>• Available via **ADK CLI** (`adk run`), **FastAPI Web UI** (`adk web`), and headless script (`run_agent.py`). |
 | **Context & Memory** | • Explicit **`state_schema=BikeFitState`** tracks user anthropometrics, current bike baseline, target bikes, and previous match solutions across conversation turns. |
 | **Orchestration & Logic** | • **Hierarchical multi-agent system**: Root orchestrator delegates specialized tasks to **`safety_agent`** (structural audit) and **`comparison_agent`** (frame ranking & posture shifts). |
 | **Observability & Tracing** | • Integrated with **OpenTelemetry** and **Google Cloud Trace** (`--otel_to_cloud`, `--trace_to_cloud`).<br/>• Native ADK callbacks (`trace_before_tool`, `trace_after_tool`, `trace_on_tool_error`) log execution timing, tool arguments, and exceptions. |
