@@ -88,24 +88,26 @@ def test_context_cache_config():
     assert config.estimated_tokens > 5000
 
 
-@pytest.mark.asyncio
-async def test_async_memory_manager(temp_db):
+def test_async_memory_manager(temp_db):
     """Verify async background tasks for state saving and compaction."""
-    db = SessionDatabaseManager(temp_db)
-    async_mgr = AsyncMemoryManager(db)
-    session_id = "async_session_1"
+    async def _run():
+        db = SessionDatabaseManager(temp_db)
+        async_mgr = AsyncMemoryManager(db)
+        session_id = "async_session_1"
 
-    # Async turn recording
-    await async_mgr.async_record_turn(session_id, "user", "Looking for gravel bike")
-    await async_mgr.async_record_turn(session_id, "model", "Specialized Diverge STR is available")
+        # Async turn recording
+        await async_mgr.async_record_turn(session_id, "user", "Looking for gravel bike")
+        await async_mgr.async_record_turn(session_id, "model", "Specialized Diverge STR is available")
 
-    # Async state saving
-    state = {"rider_height_cm": 178.0, "current_bike_brand": "Canyon"}
-    await async_mgr.async_save_state(session_id, state)
+        # Async state saving
+        state = {"rider_height_cm": 178.0, "current_bike_brand": "Canyon"}
+        await async_mgr.async_save_state(session_id, state)
 
-    loaded = db.load_state(session_id)
-    assert loaded["rider_profile"]["height_cm"] == 178.0
+        loaded = db.load_state(session_id)
+        assert loaded["rider_profile"]["height_cm"] == 178.0
 
-    # Async compaction
-    compacted = await async_mgr.async_compact_session(session_id, state)
-    assert compacted.original_turn_count == 2
+        # Async compaction
+        compacted = await async_mgr.async_compact_session(session_id, state)
+        assert compacted.original_turn_count == 2
+
+    asyncio.run(_run())
