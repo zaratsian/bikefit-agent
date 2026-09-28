@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  bikefit-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bikefit-agent
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8080
+      - ADK_DEFAULT_MODEL=gemini-2.5-flash
+    restart: unless-stopped

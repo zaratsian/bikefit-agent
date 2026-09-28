@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Google ADK & Local Storage
+.adk/
+*.sqlite
+*.sqlite3-journal
+.agent_engine_config.json
+
