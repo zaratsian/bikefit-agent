@@ -3,10 +3,10 @@
 [![CI/CD Pipeline](https://github.com/zaratsian/bikefit-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/zaratsian/bikefit-agent/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![Framework](https://img.shields.io/badge/Google%20ADK-2.0.0-orange.svg)](https://google.github.io/adk-docs/)
-[![Platform](https://img.shields.io/badge/Google%20Cloud-Vertex%20AI%20Agent%20Engine-4285F4.svg)](https://docs.cloud.google.com/agent-builder/agent-engine/overview)
+[![Platform](https://img.shields.io/badge/Google%20Cloud-Agent%20Platform-4285F4.svg)](https://docs.cloud.google.com/agent-builder/agent-engine/overview)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 
-An intelligent, autonomous bike fit and geometry copilot built with **Google Agent Development Kit (ADK)** and deployed on **Google Cloud Vertex AI Agent Engine**.
+An intelligent, autonomous bike fit and geometry copilot built with **Google Agent Development Kit (ADK)** and deployed on **Google Cloud Agent Platform**.
 
 ---
 
@@ -33,7 +33,7 @@ BikeFit AI is organized using a multi-agent hierarchy orchestrated by the Google
 
 ```mermaid
 flowchart TD
-    User["🚴 Cyclist / Fitter"] -->|Prompt / Query| RootAgent["🤖 Root Agent: BikeFit AI<br/>(Google ADK / Gemini 2.5 Flash)"]
+    User["🚴 Cyclist / Fitter"] -->|Prompt / Query| RootAgent["🤖 Root Agent: BikeFit AI<br/>(Google ADK / Gemini 3.8 Flash)"]
     
     subgraph "Context & State Memory"
         State["📋 BikeFitState<br/>• Rider Dimensions<br/>• Baseline Bike Setup<br/>• Target Shortlist<br/>• Match History"]
@@ -70,9 +70,9 @@ flowchart TD
 | :--- | :--- |
 | **Tool & Interface Design** *(20/20 pts)* | • **9 typed, custom Python tools** returning **strict, validated Pydantic models** (`CockpitCoordinates`, `MatchSolution`, `RiderFitRanges`, `SafetyAuditResult`, `BikeLookupResult`, `BikeComparisonResult`, `BikeSearchResult`, `BikeListResult`, `HumanApprovalResponse`).<br/>• Comprehensive docstrings, full type hints, and guided error recovery returning alternative catalog models.<br/>• Available via **ADK CLI** (`adk run`), **FastAPI Web UI** (`adk web`), and headless script (`run_agent.py`). |
 | **Context & Memory** *(20/20 pts)* | • **Explicit State Schema**: `BikeFitState` persists anthropometrics, baseline bike specs, and shortlists across turns.<br/>• **History Compaction & Context Caching**: `HistoryCompactor` performs semantic sliding-window turn compaction while preserving critical facts; `ContextCacheManager` manages Gemini Context Caching.<br/>• **External Persistent Database**: `SessionDatabaseManager` connects to external SQLite/relational databases for persistent session state snapshots and conversation turns.<br/>• **Async Background Tasks**: `AsyncMemoryManager` executes non-blocking `asyncio` background tasks for memory flushing and compaction. |
-| **Orchestration & Logic** *(20/20 pts)* | • **Hierarchical Multi-Agent Hierarchy**: Coordinator pattern with root orchestrator and specialized subagents (`safety_agent` and `comparison_agent`).<br/>• **Strategic Model Routing**: Role-based model dispatcher routes the Coordinator to `gemini-2.5-pro` (deep reasoning), Safety Auditor to `gemini-2.5-flash` (low-latency rule checks), and Comparator to `gemini-2.5-flash-8b` (high-throughput tabular data).<br/>• **Formal LLM Security & Guardrails**: `InputSecurityGuardrail` blocks prompt injection and jailbreaks; `OutputSafetyGuardrail` verifies physical safety boundaries.<br/>• **Human-in-the-Loop (HITL)**: `request_human_approval` gates permanent physical modifications (cutting fork steerer tubes, slammed stems) behind explicit human confirmation. |
+| **Orchestration & Logic** *(20/20 pts)* | • **Hierarchical Multi-Agent Hierarchy**: Coordinator pattern with root orchestrator and specialized subagents (`safety_agent` and `comparison_agent`).<br/>• **Strategic Model Routing**: Standardized on **`gemini-3.8-flash`** for high-throughput reasoning, low latency, and deterministic tool calling across root and subagents.<br/>• **Formal LLM Security & Guardrails**: `InputSecurityGuardrail` blocks prompt injection and jailbreaks; `OutputSafetyGuardrail` verifies physical safety boundaries.<br/>• **Human-in-the-Loop (HITL)**: `request_human_approval` gates permanent physical modifications (cutting fork steerer tubes, slammed stems) behind explicit human confirmation. |
 | **Observability & Tracing** *(20/20 pts)* | • **Structured JSON Logging**: `StructuredJsonFormatter` outputs RFC 3339 timestamps, severity, event types, trace/span IDs, and structured payloads to stdout.<br/>• **Complete OpenTelemetry Spans**: Fully implemented `tracer.start_span()`, duration calculation, attributes, event lifecycle, and `StatusCode.OK` / `StatusCode.ERROR` status recording.<br/>• **Automated PII Redaction**: `redact_pii_text` and `sanitize_payload` automatically scrub emails, phone numbers, credit cards, IP addresses, and rider identities from all log payloads and traces. |
-| **Infrastructure & CI/CD** *(15/15 pts)* | • Comprehensive **GitHub Actions workflow** (`.github/workflows/ci.yml`) testing Python 3.11 & 3.12, linting, pytest suite (30 unit tests), and Docker build.<br/>• Production multi-stage **`Dockerfile`**, **`docker-compose.yml`**, and automated deployment scripts for **Vertex AI Agent Engine** and **Cloud Run**. |
+| **Infrastructure & CI/CD** *(15/15 pts)* | • Comprehensive **GitHub Actions workflow** (`.github/workflows/ci.yml`) testing Python 3.11 & 3.12, linting, pytest suite (30 unit tests), and Docker build.<br/>• Production multi-stage **`Dockerfile`**, **`docker-compose.yml`**, and automated deployment scripts for **Google Cloud Agent Platform** and **Cloud Run**. |
 
 ---
 
@@ -167,7 +167,7 @@ adk run bikefit_agent "Compare a Trek Domane 56 to a Specialized Tarmac SL8 56"
 
 ## ☁️ Cloud Deployment
 
-### 1. Deploy to Google Cloud Vertex AI Agent Engine
+### 1. Deploy to Google Cloud Agent Platform
 
 Ensure you are authenticated with Google Cloud:
 ```bash
@@ -220,27 +220,36 @@ bikefit-agent/
 │   └── workflows/
 │       └── ci.yml                 # GitHub Actions CI/CD pipeline
 ├── bikefit_agent/                 # Root ADK Agent Module
-│   ├── __init__.py                # Package init (exports root_agent)
+│   ├── __init__.py                # Package exports
 │   ├── agent.py                   # Root Agent definition & instructions
 │   ├── state.py                   # Context & Memory schema (BikeFitState)
-│   ├── telemetry.py               # OpenTelemetry callbacks & logging
+│   ├── model_router.py            # Strategic Model Router (Gemini 3.8 Flash)
+│   ├── telemetry.py               # Structured JSON logs & OpenTelemetry spans
 │   ├── data/
 │   │   └── bikes.json             # Verified bicycle geometry database
+│   ├── memory/
+│   │   ├── persistence.py         # SQLite persistent session database
+│   │   ├── compaction.py          # History compaction & Gemini Context Caching
+│   │   └── async_tasks.py         # Async non-blocking memory managers
+│   ├── security/
+│   │   ├── guardrails.py          # Input prompt injection & output safety guards
+│   │   └── pii.py                 # Automated PII redaction engine
 │   ├── subagents/
-│   │   ├── __init__.py
 │   │   ├── safety_agent.py        # Structural & handling auditor subagent
 │   │   └── comparison_agent.py    # Geometry comparison & ranking subagent
 │   └── tools/
-│       ├── __init__.py            # Export all custom tools
 │       ├── geometry.py            # Coordinate trigonometry & match solver
-│       └── catalog.py             # Local catalog search & comparison tools
+│       ├── catalog.py             # Local catalog search & comparison tools
+│       └── hitl.py                # Human-in-the-Loop approval tool
 ├── scripts/
-│   ├── deploy_agent_engine.sh     # Vertex AI Agent Engine deployment script
+│   ├── deploy_agent_engine.sh     # Google Cloud Agent Platform deployment script
 │   └── deploy_cloud_run.sh        # Google Cloud Run deployment script
 ├── tests/
 │   ├── test_agent.py              # ADK agent, subagent, and callback tests
 │   ├── test_catalog.py            # Catalog search and lookup tests
-│   └── test_geometry.py           # Trigonometry & solver math tests
+│   ├── test_geometry.py           # Trigonometry & solver math tests
+│   ├── test_memory.py             # Persistent DB & async compaction tests
+│   └── test_security_and_hitl.py  # Security guardrails & HITL tests
 ├── .env.example                   # Environment configuration template
 ├── .gitignore                     # Git ignore rules (secrets protected)
 ├── Dockerfile                     # Multi-stage production container

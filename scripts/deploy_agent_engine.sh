@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Deploy BikeFit Agent to Google Cloud Vertex AI Agent Engine
+# Deploy BikeFit Agent to Google Cloud Agent Platform
 # Using Google ADK (Agent Development Kit)
 # ==============================================================================
 
@@ -18,7 +18,7 @@ if [[ -z "$PROJECT_ID" ]]; then
   exit 1
 fi
 
-echo "🚀 Deploying BikeFit Agent to Vertex AI Agent Engine..."
+echo "🚀 Deploying BikeFit Agent to Google Cloud Agent Platform..."
 echo "   Project:      ${PROJECT_ID}"
 echo "   Region:       ${REGION}"
 echo "   Display Name: ${DISPLAY_NAME}"

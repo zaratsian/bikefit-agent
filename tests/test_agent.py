@@ -24,19 +24,19 @@ def test_root_agent_initialization():
 
 
 def test_strategic_model_routing():
-    """Verify strategic model routing assigns pro to coordinator and flash to subagents."""
+    """Verify model routing assigns gemini-3.8-flash across the agent hierarchy."""
     assert root_agent.model == get_model_for_role(AgentRole.COORDINATOR)
-    assert "pro" in root_agent.model or "gemini" in root_agent.model
+    assert "gemini-3.8-flash" in root_agent.model
 
     assert safety_agent.model == get_model_for_role(AgentRole.SAFETY_AUDITOR)
-    assert "flash" in safety_agent.model
+    assert "gemini-3.8-flash" in safety_agent.model
 
     assert comparison_agent.model == get_model_for_role(AgentRole.COMPARATOR)
-    assert "flash" in comparison_agent.model
+    assert "gemini-3.8-flash" in comparison_agent.model
 
     # Dynamic routing
     complex_model = route_query_model("Help me solve an impossible compromise across 3 frames")
-    assert "pro" in complex_model or "gemini" in complex_model
+    assert "gemini-3.8-flash" in complex_model
 
 
 def test_root_agent_tools_count():

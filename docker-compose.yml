@@ -13,5 +13,5 @@ services:
     environment:
       - HOST=0.0.0.0
       - PORT=8080
-      - ADK_DEFAULT_MODEL=gemini-2.5-flash
+      - ADK_DEFAULT_MODEL=gemini-3.8-flash
     restart: unless-stopped

@@ -1,10 +1,7 @@
 """Strategic Model Routing and Dynamic LLM Dispatcher.
 
-Implements strategic model routing across the agent hierarchy to optimize for
-reasoning depth, latency, and cost:
-- Coordinator / Root Agent: gemini-2.5-pro (Complex reasoning & synthesis)
-- Safety Audit Subagent: gemini-2.5-flash (Low-latency rule verification)
-- Comparison Subagent: gemini-2.5-flash-8b (High-throughput tabular analysis)
+Implements model routing across the agent hierarchy using Gemini 3.8 Flash
+(gemini-3.8-flash) for high-performance reasoning, low latency, and efficient tool calling.
 """
 
 import os
@@ -19,11 +16,11 @@ class AgentRole(str, Enum):
     COMPARATOR = "comparator"
 
 
-# Strategic model configuration by agent role
+# Model configuration by agent role (standardized on gemini-3.8-flash)
 MODEL_ROUTING_CONFIG = {
-    AgentRole.COORDINATOR: os.getenv("BIKEFIT_COORDINATOR_MODEL", "gemini-2.5-pro"),
-    AgentRole.SAFETY_AUDITOR: os.getenv("BIKEFIT_SAFETY_MODEL", "gemini-2.5-flash"),
-    AgentRole.COMPARATOR: os.getenv("BIKEFIT_COMPARATOR_MODEL", "gemini-2.5-flash-8b"),
+    AgentRole.COORDINATOR: os.getenv("BIKEFIT_COORDINATOR_MODEL", "gemini-3.8-flash"),
+    AgentRole.SAFETY_AUDITOR: os.getenv("BIKEFIT_SAFETY_MODEL", "gemini-3.8-flash"),
+    AgentRole.COMPARATOR: os.getenv("BIKEFIT_COMPARATOR_MODEL", "gemini-3.8-flash"),
 }
 
 
@@ -34,9 +31,9 @@ def get_model_for_role(role: AgentRole) -> str:
         role: The AgentRole (COORDINATOR, SAFETY_AUDITOR, COMPARATOR).
 
     Returns:
-        The strategically selected Gemini model identifier.
+        The selected Gemini 3.8 Flash model identifier.
     """
-    return MODEL_ROUTING_CONFIG.get(role, "gemini-2.5-flash")
+    return MODEL_ROUTING_CONFIG.get(role, "gemini-3.8-flash")
 
 
 def route_query_model(user_query: str) -> str:
@@ -50,13 +47,10 @@ def route_query_model(user_query: str) -> str:
     """
     query_lower = user_query.lower()
 
-    # Highly complex multi-variable matching or custom compromise
     if any(k in query_lower for k in ["compromise", "solve", "replicate", "reproduce", "compare multiple"]):
         return MODEL_ROUTING_CONFIG[AgentRole.COORDINATOR]
 
-    # Quick catalog lookups
     if any(k in query_lower for k in ["list", "what sizes", "search category"]):
         return MODEL_ROUTING_CONFIG[AgentRole.COMPARATOR]
 
-    # Default to flash for standard queries
     return MODEL_ROUTING_CONFIG[AgentRole.SAFETY_AUDITOR]

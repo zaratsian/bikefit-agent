@@ -80,7 +80,7 @@ class HistoryCompactor:
 
 class ContextCacheConfig(BaseModel):
     """Configuration for Google Gemini Context Caching."""
-    model: str = Field(default="gemini-2.5-pro", description="Gemini model targeted for caching")
+    model: str = Field(default="gemini-3.8-flash", description="Gemini model targeted for caching")
     ttl_seconds: int = Field(default=3600, description="Time to live for context cache in seconds")
     cached_content_name: str = Field(default="bikefit-catalog-cache", description="Identifier for cached context")
     estimated_tokens: int = Field(default=8500, description="Estimated token count of catalog and instructions")
@@ -93,7 +93,7 @@ class ContextCacheManager:
     def get_cache_configuration(ttl_hours: int = 1) -> ContextCacheConfig:
         """Generate context cache configuration for long-lived agent sessions."""
         return ContextCacheConfig(
-            model="gemini-2.5-pro",
+            model="gemini-3.8-flash",
             ttl_seconds=ttl_hours * 3600,
             cached_content_name="bikefit-catalog-instructions-cache",
             estimated_tokens=9200
