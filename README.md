@@ -4,7 +4,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![Framework](https://img.shields.io/badge/Google%20ADK-2.0.0-orange.svg)](https://google.github.io/adk-docs/)
 [![Platform](https://img.shields.io/badge/Google%20Cloud-Agent%20Platform-4285F4.svg)](https://docs.cloud.google.com/agent-builder/agent-engine/overview)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 An intelligent, autonomous bike fit and geometry copilot built with **Google Agent Development Kit (ADK)** and deployed on **Google Cloud Agent Platform**.
 
@@ -248,6 +248,9 @@ bikefit-agent/
 
 ---
 
-## 📜 License
+## 📜 License & Liability Disclaimer
 
-Distributed under the Apache 2.0 License. See `LICENSE` for details.
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
+
+> [!WARNING]
+> **Safety & Fit Disclaimer**: BikeFit AI is provided for educational and informational geometry comparison purposes only. Modifying bicycle components, cutting fork steerer tubes, or configuring aggressive cockpits carries inherent mechanical risks. Always verify measurements and consult a certified bicycle mechanic or professional bike fitter before making permanent physical alterations to any bicycle.
