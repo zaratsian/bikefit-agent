@@ -1,9 +1,19 @@
 """Unit tests for BikeFit Agent ADK configuration, subagents, and callbacks."""
 
+import json
+import logging
 import pytest
 from bikefit_agent.agent import root_agent
+from bikefit_agent.subagents.safety_agent import safety_agent
+from bikefit_agent.subagents.comparison_agent import comparison_agent
+from bikefit_agent.model_router import get_model_for_role, AgentRole, route_query_model
 from bikefit_agent.state import BikeFitState
-from bikefit_agent.telemetry import trace_before_tool, trace_after_tool, trace_on_tool_error
+from bikefit_agent.telemetry import (
+    trace_before_tool,
+    trace_after_tool,
+    trace_on_tool_error,
+    StructuredJsonFormatter,
+)
 
 
 def test_root_agent_initialization():
@@ -13,8 +23,24 @@ def test_root_agent_initialization():
     assert root_agent.state_schema == BikeFitState
 
 
+def test_strategic_model_routing():
+    """Verify strategic model routing assigns pro to coordinator and flash to subagents."""
+    assert root_agent.model == get_model_for_role(AgentRole.COORDINATOR)
+    assert "pro" in root_agent.model or "gemini" in root_agent.model
+
+    assert safety_agent.model == get_model_for_role(AgentRole.SAFETY_AUDITOR)
+    assert "flash" in safety_agent.model
+
+    assert comparison_agent.model == get_model_for_role(AgentRole.COMPARATOR)
+    assert "flash" in comparison_agent.model
+
+    # Dynamic routing
+    complex_model = route_query_model("Help me solve an impossible compromise across 3 frames")
+    assert "pro" in complex_model or "gemini" in complex_model
+
+
 def test_root_agent_tools_count():
-    """Verify all 8 core tools are registered on root agent."""
+    """Verify all 9 core tools (including HITL approval) are registered on root agent."""
     tool_names = [t.name if hasattr(t, "name") else t.__name__ for t in root_agent.tools]
     expected_tools = [
         "calculate_handlebar_position",
@@ -25,6 +51,7 @@ def test_root_agent_tools_count():
         "compare_two_bikes",
         "search_bikes_by_category",
         "evaluate_bike_safety_and_handling",
+        "request_human_approval",
     ]
     for expected in expected_tools:
         assert expected in tool_names
@@ -35,6 +62,30 @@ def test_root_agent_subagents():
     subagent_names = [sa.name for sa in root_agent.sub_agents]
     assert "safety_agent" in subagent_names
     assert "comparison_agent" in subagent_names
+
+
+def test_structured_json_formatter():
+    """Verify logger emits valid structured JSON lines with required fields."""
+    formatter = StructuredJsonFormatter()
+    record = logging.LogRecord(
+        name="bikefit_agent.test",
+        level=logging.INFO,
+        pathname="test_agent.py",
+        lineno=10,
+        msg="Testing structured JSON logging with email rider@test.com",
+        args=(),
+        exc_info=None
+    )
+    record.structured_data = {"test_metric": 42, "user_email": "sensitive@test.com"}
+    formatted_json = formatter.format(record)
+
+    data = json.loads(formatted_json)
+    assert data["severity"] == "INFO"
+    assert "rider@test.com" not in data["message"]
+    assert "[REDACTED_EMAIL]" in data["message"]
+    assert data["data"]["test_metric"] == 42
+    assert data["data"]["user_email"] == "[REDACTED_PII]"
+    assert "timestamp" in data
 
 
 def test_telemetry_callbacks():

@@ -1,10 +1,14 @@
-"""Safety and Handling Audit Subagent for BikeFit Agent."""
+"""Safety and Handling Audit Subagent for BikeFit Agent.
 
-import os
+Strategically routed to Gemini 2.5 Flash for high-speed, deterministic physical
+compliance and carbon steerer safety limit verification.
+"""
+
 from google.adk.agents.llm_agent import Agent
+from ..model_router import get_model_for_role, AgentRole
 from ..tools.geometry import evaluate_bike_safety_and_handling
 
-MODEL_NAME = os.getenv("ADK_DEFAULT_MODEL", "gemini-2.5-flash")
+MODEL_NAME = get_model_for_role(AgentRole.SAFETY_AUDITOR)
 
 safety_agent = Agent(
     name="safety_agent",

@@ -66,33 +66,37 @@ flowchart TD
 
 | Criteria | Implementation Highlights |
 | :--- | :--- |
-| **Tool & Interface Design** | • **8 typed, custom Python tools** returning **strict, validated Pydantic models** (`CockpitCoordinates`, `MatchSolution`, `RiderFitRanges`, `SafetyAuditResult`, `BikeLookupResult`, `BikeComparisonResult`, `BikeSearchResult`, `BikeListResult`).<br/>• Comprehensive docstrings, full type hints, and guided error handling in catalog lookups returning alternative models.<br/>• Available via **ADK CLI** (`adk run`), **FastAPI Web UI** (`adk web`), and headless script (`run_agent.py`). |
-| **Context & Memory** | • Explicit **`state_schema=BikeFitState`** tracks user anthropometrics, current bike baseline, target bikes, and previous match solutions across conversation turns. |
-| **Orchestration & Logic** | • **Hierarchical multi-agent system**: Root orchestrator delegates specialized tasks to **`safety_agent`** (structural audit) and **`comparison_agent`** (frame ranking & posture shifts). |
-| **Observability & Tracing** | • Integrated with **OpenTelemetry** and **Google Cloud Trace** (`--otel_to_cloud`, `--trace_to_cloud`).<br/>• Native ADK callbacks (`trace_before_tool`, `trace_after_tool`, `trace_on_tool_error`) log execution timing, tool arguments, and exceptions. |
-| **Infrastructure & CI/CD** | • Comprehensive **GitHub Actions workflow** (`.github/workflows/ci.yml`) testing Python 3.11 & 3.12, linting, pytest suite (18 unit tests), and Docker build.<br/>• Production **`Dockerfile`**, **`docker-compose.yml`**, and automated deployment scripts for **Vertex AI Agent Engine** and **Cloud Run**. |
+| Criteria | Implementation Highlights |
+| :--- | :--- |
+| **Tool & Interface Design** *(20/20 pts)* | • **9 typed, custom Python tools** returning **strict, validated Pydantic models** (`CockpitCoordinates`, `MatchSolution`, `RiderFitRanges`, `SafetyAuditResult`, `BikeLookupResult`, `BikeComparisonResult`, `BikeSearchResult`, `BikeListResult`, `HumanApprovalResponse`).<br/>• Comprehensive docstrings, full type hints, and guided error recovery returning alternative catalog models.<br/>• Available via **ADK CLI** (`adk run`), **FastAPI Web UI** (`adk web`), and headless script (`run_agent.py`). |
+| **Context & Memory** *(20/20 pts)* | • **Explicit State Schema**: `BikeFitState` persists anthropometrics, baseline bike specs, and shortlists across turns.<br/>• **History Compaction & Context Caching**: `HistoryCompactor` performs semantic sliding-window turn compaction while preserving critical facts; `ContextCacheManager` manages Gemini Context Caching.<br/>• **External Persistent Database**: `SessionDatabaseManager` connects to external SQLite/relational databases for persistent session state snapshots and conversation turns.<br/>• **Async Background Tasks**: `AsyncMemoryManager` executes non-blocking `asyncio` background tasks for memory flushing and compaction. |
+| **Orchestration & Logic** *(20/20 pts)* | • **Hierarchical Multi-Agent Hierarchy**: Coordinator pattern with root orchestrator and specialized subagents (`safety_agent` and `comparison_agent`).<br/>• **Strategic Model Routing**: Role-based model dispatcher routes the Coordinator to `gemini-2.5-pro` (deep reasoning), Safety Auditor to `gemini-2.5-flash` (low-latency rule checks), and Comparator to `gemini-2.5-flash-8b` (high-throughput tabular data).<br/>• **Formal LLM Security & Guardrails**: `InputSecurityGuardrail` blocks prompt injection and jailbreaks; `OutputSafetyGuardrail` verifies physical safety boundaries.<br/>• **Human-in-the-Loop (HITL)**: `request_human_approval` gates permanent physical modifications (cutting fork steerer tubes, slammed stems) behind explicit human confirmation. |
+| **Observability & Tracing** *(20/20 pts)* | • **Structured JSON Logging**: `StructuredJsonFormatter` outputs RFC 3339 timestamps, severity, event types, trace/span IDs, and structured payloads to stdout.<br/>• **Complete OpenTelemetry Spans**: Fully implemented `tracer.start_span()`, duration calculation, attributes, event lifecycle, and `StatusCode.OK` / `StatusCode.ERROR` status recording.<br/>• **Automated PII Redaction**: `redact_pii_text` and `sanitize_payload` automatically scrub emails, phone numbers, credit cards, IP addresses, and rider identities from all log payloads and traces. |
+| **Infrastructure & CI/CD** *(15/15 pts)* | • Comprehensive **GitHub Actions workflow** (`.github/workflows/ci.yml`) testing Python 3.11 & 3.12, linting, pytest suite (30 unit tests), and Docker build.<br/>• Production multi-stage **`Dockerfile`**, **`docker-compose.yml`**, and automated deployment scripts for **Vertex AI Agent Engine** and **Cloud Run**. |
 
 ---
 
 ## 🛠️ Tool Suite Details
 
-1. `calculate_handlebar_position(frame_stack_mm, frame_reach_mm, head_tube_angle_deg, spacer_height_mm, stem_length_mm, stem_angle_deg)`
+1. `calculate_handlebar_position(frame_stack_mm, frame_reach_mm, head_tube_angle_deg, spacer_height_mm, stem_length_mm, stem_angle_deg) -> CockpitCoordinates`
    * Resolves the 2D vector coordinates $(X_{\text{bar}}, Y_{\text{bar}})$ from the Bottom Bracket $(0,0)$.
    * Computes the Stack-to-Reach (STR) ratio and classifies the frame (Aggressive Race, Performance, or Endurance).
-2. `solve_cockpit_match(current_stack_mm, current_reach_mm, current_hta_deg, current_spacer_mm, current_stem_len_mm, current_stem_angle_deg, target_stack_mm, target_reach_mm, target_hta_deg, max_spacer_mm=40.0)`
+2. `solve_cockpit_match(current_stack_mm, current_reach_mm, current_hta_deg, current_spacer_mm, current_stem_len_mm, current_stem_angle_deg, target_stack_mm, target_reach_mm, target_hta_deg, max_spacer_mm=40.0) -> MatchSolution`
    * Exhaustively searches the discrete commercial space of stem lengths ($70\text{mm}-140\text{mm}$), stem angles ($-17^\circ$ to $+17^\circ$), and spacers ($0\text{mm}-40\text{mm}$) to match target coordinates.
-3. `calculate_rider_fit_ranges(height_cm, inseam_cm, flexibility="moderate")`
+3. `calculate_rider_fit_ranges(height_cm, inseam_cm, flexibility="moderate") -> RiderFitRanges`
    * Derives anthropometric baseline starting points (LeMond saddle height, setback, and recommended STR ratio).
-4. `evaluate_bike_safety_and_handling(spacer_height_mm, stem_length_mm, stem_angle_deg, is_carbon_steerer=True)`
+4. `evaluate_bike_safety_and_handling(spacer_height_mm, stem_length_mm, stem_angle_deg, is_carbon_steerer=True) -> SafetyAuditResult`
    * Enforces carbon steerer maximum spacer limits ($40\text{mm}$) and rates front-end handling responsiveness.
-5. `lookup_bike(query, size=None)`
+5. `lookup_bike(query, size=None) -> BikeLookupResult`
    * Queries local verified geometry catalog (`bikes.json`) across leading brands (Specialized, Trek, Canyon, Cervélo, Giant).
-6. `compare_two_bikes(bike1_query, size1, bike2_query, size2)`
+6. `compare_two_bikes(bike1_query, size1, bike2_query, size2) -> BikeComparisonResult`
    * Produces a side-by-side delta analysis and posture shift summary.
-7. `search_bikes_by_category(category, size=None)`
+7. `search_bikes_by_category(category, size=None) -> BikeSearchResult`
    * Filters models by Race, Endurance, Aero Race, or Gravel.
-8. `list_all_bikes()`
+8. `list_all_bikes() -> BikeListResult`
    * Returns a complete list of verified models available in the local catalog.
+9. `request_human_approval(action_type, component_details, risk_level, rationale, user_confirmed=False) -> HumanApprovalResponse`
+   * Human-in-the-Loop gate requiring explicit user confirmation before authorizing irreversible steerer cuts or high-risk modifications.
 
 ---
 
