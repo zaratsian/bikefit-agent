@@ -62,20 +62,6 @@ flowchart TD
 
 ---
 
-## 🎯 Evaluation Rubric Alignment (Target Score: 95/95)
-
-| Criteria | Implementation Highlights |
-| :--- | :--- |
-| Criteria | Implementation Highlights |
-| :--- | :--- |
-| **Tool & Interface Design** *(20/20 pts)* | • **9 typed, custom Python tools** returning **strict, validated Pydantic models** (`CockpitCoordinates`, `MatchSolution`, `RiderFitRanges`, `SafetyAuditResult`, `BikeLookupResult`, `BikeComparisonResult`, `BikeSearchResult`, `BikeListResult`, `HumanApprovalResponse`).<br/>• Comprehensive docstrings, full type hints, and guided error recovery returning alternative catalog models.<br/>• Available via **ADK CLI** (`adk run`), **FastAPI Web UI** (`adk web`), and headless script (`run_agent.py`). |
-| **Context & Memory** *(20/20 pts)* | • **Explicit State Schema**: `BikeFitState` persists anthropometrics, baseline bike specs, and shortlists across turns.<br/>• **History Compaction & Context Caching**: `HistoryCompactor` performs semantic sliding-window turn compaction while preserving critical facts; `ContextCacheManager` manages Gemini Context Caching.<br/>• **External Persistent Database**: `SessionDatabaseManager` connects to external SQLite/relational databases for persistent session state snapshots and conversation turns.<br/>• **Async Background Tasks**: `AsyncMemoryManager` executes non-blocking `asyncio` background tasks for memory flushing and compaction. |
-| **Orchestration & Logic** *(20/20 pts)* | • **Hierarchical Multi-Agent Hierarchy**: Coordinator pattern with root orchestrator and specialized subagents (`safety_agent` and `comparison_agent`).<br/>• **Strategic Model Routing**: Standardized on **`gemini-3.8-flash`** for high-throughput reasoning, low latency, and deterministic tool calling across root and subagents.<br/>• **Formal LLM Security & Guardrails**: `InputSecurityGuardrail` blocks prompt injection and jailbreaks; `OutputSafetyGuardrail` verifies physical safety boundaries.<br/>• **Human-in-the-Loop (HITL)**: `request_human_approval` gates permanent physical modifications (cutting fork steerer tubes, slammed stems) behind explicit human confirmation. |
-| **Observability & Tracing** *(20/20 pts)* | • **Structured JSON Logging**: `StructuredJsonFormatter` outputs RFC 3339 timestamps, severity, event types, trace/span IDs, and structured payloads to stdout.<br/>• **Complete OpenTelemetry Spans**: Fully implemented `tracer.start_span()`, duration calculation, attributes, event lifecycle, and `StatusCode.OK` / `StatusCode.ERROR` status recording.<br/>• **Automated PII Redaction**: `redact_pii_text` and `sanitize_payload` automatically scrub emails, phone numbers, credit cards, IP addresses, and rider identities from all log payloads and traces. |
-| **Infrastructure & CI/CD** *(15/15 pts)* | • Comprehensive **GitHub Actions workflow** (`.github/workflows/ci.yml`) testing Python 3.11 & 3.12, linting, pytest suite (30 unit tests), and Docker build.<br/>• Production multi-stage **`Dockerfile`**, **`docker-compose.yml`**, and automated deployment scripts for **Google Cloud Agent Platform** and **Cloud Run**. |
-
----
-
 ## 🛠️ Tool Suite Details
 
 1. `calculate_handlebar_position(frame_stack_mm, frame_reach_mm, head_tube_angle_deg, spacer_height_mm, stem_length_mm, stem_angle_deg) -> CockpitCoordinates`
